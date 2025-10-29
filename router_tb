@@ -1,0 +1,122 @@
+module router_tb;
+
+	// Inputs
+	reg clk;
+	reg rstn;
+	reg read_enb_0;
+	reg read_enb_1;
+	reg read_enb_2;
+	reg [7:0] data_in;
+	reg pkt_valid;
+	// Outputs
+	wire [7:0] data_out_0;
+	wire [7:0] data_out_1;
+	wire [7:0] data_out_2;
+	wire valid_out_0;
+	wire valid_out_1;
+	wire valid_out_2;
+	wire error;
+	wire busy;
+	integer i;
+	// Instantiate the Unit Under Test (UUT)
+	router_top uut (
+		.clk(clk), 
+		.rstn(rstn), 
+		.read_enb_0(read_enb_0), 
+		.read_enb_1(read_enb_1), 
+		.read_enb_2(read_enb_2), 
+		.data_in(data_in), 
+		.pkt_valid(pkt_valid), 
+		.data_out_0(data_out_0), 
+		.data_out_1(data_out_1), 
+		.data_out_2(data_out_2), 
+		.valid_out_0(valid_out_0), 
+		.valid_out_1(valid_out_1), 
+		.valid_out_2(valid_out_2), 
+		.error(error), 
+		.busy(busy)
+	);
+
+	initial begin
+		// Initialize Inputs
+		clk = 0;
+		rstn = 0;
+		read_enb_0 = 0;
+		read_enb_1 = 0;
+		read_enb_2 = 0;
+		data_in = 0;
+		pkt_valid = 0;
+	end
+	//clock generation
+	always #5 clk=~clk;
+	//reset task
+	task reset;
+	begin
+	@(negedge clk)
+		rstn=1'b0;
+	@(negedge clk)
+		rstn=1'b1;
+	end
+	endtask
+	
+	//payload length 14
+	task payload_14;
+	reg [7:0] header,payload,parity;
+	reg [1:0]add;
+	reg [5:0] payload_length;
+	begin
+	//pkt_valid=1'b1;
+	@(negedge clk)
+	
+	wait(~busy)
+	@(negedge clk)
+		pkt_valid=1'b1;
+		payload_length=6'd14;
+		add=2'b01;
+		header={payload_length,add};
+		data_in=header;
+		parity=0;
+		parity=parity^header;
+	@(negedge clk)
+		wait(~busy)
+		
+			for(i=0;i<payload_length;i=i+1)
+			begin
+			@(negedge clk)
+			wait(~busy)
+				payload={$random}%256;
+				data_in=payload;
+				parity=parity^payload;
+				
+				if(i<=4'd10)
+					read_enb_1=1'b1;
+				
+			end
+			//@(negedge clk)
+			//read_enb_1=1'b1;
+		@(negedge clk)
+			wait(~busy)
+				pkt_valid=1'b0;
+				data_in=parity;
+				
+	end
+endtask
+//reading 
+initial 
+begin
+	reset;
+	@(negedge clk)
+	payload_14;
+	//@(negedge clk)
+	//repeat(3) @(negedge clk);
+	//read_enb_1=1'b1;
+	//wait(~valid_out_0)
+	//@(negedge clk)
+	//@(negedge clk)
+	//#600 $finish;
+end
+	
+	
+      
+endmodule
+
